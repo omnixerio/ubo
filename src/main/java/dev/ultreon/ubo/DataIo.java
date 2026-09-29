@@ -13,7 +13,7 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public class DataIo {
-    private static final short VERSION = 4;
+    private static final short VERSION = 5;
     private static final int HEADER = 0xff804269;
     private static final int BUFFER_SIZE = 4096;
 
