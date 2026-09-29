@@ -27,4 +27,16 @@ public class DataTypes {
     public static int VECTOR_2 = 0x90;
     public static int VECTOR_3 = 0x91;
     public static int VECTOR_4 = 0x92;
+    public static int INT_VECTOR_2 = 0x93;
+    public static int INT_VECTOR_3 = 0x94;
+    public static int INT_VECTOR_4 = 0x95;
+    public static int LONG_VECTOR_2 = 0x96;
+    public static int LONG_VECTOR_3 = 0x97;
+    public static int LONG_VECTOR_4 = 0x98;
+    public static int FLOAT_VECTOR_2 = 0x99;
+    public static int FLOAT_VECTOR_3 = 0x9a;
+    public static int FLOAT_VECTOR_4 = 0x9b;
+    public static int DOUBLE_VECTOR_2 = 0x9c;
+    public static int DOUBLE_VECTOR_3 = 0x9d;
+    public static int DOUBLE_VECTOR_4 = 0x9e;
 }
