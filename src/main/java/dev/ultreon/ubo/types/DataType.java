@@ -44,4 +44,21 @@ public interface DataType<T> {
 
         return def;
     }
+
+    default <R extends DataType<?>> R cast(Class<R> type) {
+        return type.cast(this);
+    }
+
+    @SuppressWarnings("unchecked")
+    default <R extends DataType<?>> R cast(R def) {
+        if (this.equals(def)) {
+            return def;
+        }
+
+        if (def.getClass().isInstance(this)) {
+            return (R) this;
+        }
+
+        return def;
+    }
 }

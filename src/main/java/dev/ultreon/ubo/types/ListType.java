@@ -179,12 +179,14 @@ public class ListType<T extends DataType<?>> implements DataType<List<T>>, List<
         return id;
     }
 
+    @SuppressWarnings("unchecked")
     @SafeVarargs
-    public final <C extends DataType<?>> ListType<C> cast(C... type) {
-        return this.cast((Class<C>) type.getClass().getComponentType());
+    public final <C extends DataType<?>> ListType<C> listCast(C... type) {
+        return this.listCast((Class<C>) type.getClass().getComponentType());
     }
 
-    public final <C extends DataType<?>> ListType<C> cast(Class<C> type) {
+    @SuppressWarnings("unchecked")
+    public final <C extends DataType<?>> ListType<C> listCast(Class<C> type) {
         ListType<C> cs = new ListType<>(type);
         cs.setValue((List<C>) obj);
         return cs;

@@ -38,10 +38,141 @@ public class UsoParser {
             case 'f':
                 this.unread();
                 return readBoolean();
+            case 'v':
+                return readVector();
             default:
                 if (Character.isDigit(read)) return readNumber(read);
                 throw new IOException("Invalid USO: " + (char) read);
         }
+    }
+
+    private DataType<?> readVector() throws IOException {
+        int size = read();
+        if (size == -1) throw new EOFException("Invalid vector: EOF, expected size");
+
+        if (read() != ':') throw new IOException("Invalid vector: expected ':' after size " + (char) size);
+
+        int elementType = read();
+        if (elementType == -1) throw new EOFException("Invalid vector: EOF, expected element type");
+
+        switch ((char) size) {
+            case '2':
+                return readVector(2, (char) elementType);
+            case '3':
+                return readVector(3, (char) elementType);
+            case '4':
+                return readVector(4, (char) elementType);
+            default:
+                throw new IOException("Invalid vector count: " + (char) size);
+        }
+    }
+
+    private DataType<?> readVector(int size, char elementType) throws IOException {
+        String vector = "v" + size;
+        if (read() != '[') throw new IOException("Invalid " + vector + ": expected '['");
+
+        DataType<?>[] elements = new DataType<?>[size];
+        for (int i = 0; i < size; i++) {
+            readWhitespace();
+            elements[i] = readVectorElement(elementType);
+            readWhitespace();
+            if (i + 1 < size && read() != ',') throw new IOException("Invalid " + vector + ": expected ',' after element " + i);
+        }
+
+        if (read() != ']') throw new IOException("Invalid " + vector + ": expected ']'");
+
+        switch (size) {
+            case 2:
+                return new Vector2Type<>(elements[0], elements[1]);
+            case 3:
+                return new Vector3Type<>(elements[0], elements[1], elements[2]);
+            default:
+                return new Vector4Type<>(elements[0], elements[1], elements[2], elements[3]);
+        }
+    }
+
+    private DataType<?> readVectorElement(char type) throws IOException {
+        switch (type) {
+            case 'b':
+                return new ByteType(Byte.parseByte(readNumberText()));
+            case 'z':
+                return readBoolean();
+            case 's':
+                return new ShortType(Short.parseShort(readNumberText()));
+            case 'i':
+                return new IntType(Integer.parseInt(readNumberText()));
+            case 'l':
+                return new LongType(Long.parseLong(readNumberText()));
+            case 'f':
+                return new FloatType(Float.parseFloat(readNumberText()));
+            case 'd':
+                return new DoubleType(Double.parseDouble(readNumberText()));
+            case 'I':
+                return new BigIntType(new BigInteger(readNumberText()));
+            case 'D':
+                return new BigDecType(new BigDecimal(readNumberText()));
+            case 'c':
+                return readCharElement();
+            case 't':
+                return readText();
+            default:
+                throw new IOException("Invalid vector element type: " + type);
+        }
+    }
+
+    private CharType readCharElement() throws IOException {
+        int read = read();
+        if (read != '\'') throw new IOException("Invalid char: expected ' but got " + (char) read);
+        return new CharType(readChar());
+    }
+
+    private StringType readText() throws IOException {
+        if (read() != '"') throw new IOException("Invalid text: expected '\"'");
+        return readString();
+    }
+
+    /**
+     * Reads a plain number, without the type marker used by the non-vector parts of USO. In addition to the digits,
+     * this accepts a leading minus sign and an exponent, since vectors regularly hold negative and huge values.
+     */
+    private String readNumberText() throws IOException {
+        StringBuilder builder = new StringBuilder();
+
+        int read = read();
+        if (read == '-') {
+            builder.append('-');
+            read = read();
+        }
+
+        boolean decimal = false;
+        boolean exponent = false;
+        while (read != -1) {
+            if (Character.isDigit(read)) {
+                builder.append((char) read);
+            } else if (read == '.' && !decimal && !exponent) {
+                decimal = true;
+                builder.append('.');
+            } else if ((read == 'e' || read == 'E') && !exponent) {
+                exponent = true;
+                builder.append((char) read);
+                read = read();
+                if (read == '-' || read == '+') {
+                    builder.append((char) read);
+                } else {
+                    unread();
+                }
+            } else {
+                unread();
+                break;
+            }
+            read = read();
+        }
+
+        if (builder.length() == 0 || !Character.isDigit(builder.charAt(builder.length() - 1))) {
+            throw new IOException("Invalid number");
+        }
+
+        return builder.toString();
     }
 
     private DataType<?> readBoolean() throws IOException {

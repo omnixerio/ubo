@@ -15,6 +15,8 @@ import java.nio.file.Files;
 import java.util.BitSet;
 import java.util.UUID;
 
+import static dev.ultreon.tests.data.Utils.file;
+
 class UsoReadWriteTests {
     @Test
     @DisplayName("MapTypes")
@@ -25,7 +27,7 @@ class UsoReadWriteTests {
         System.out.println("Writing map data as USO...");
         uso = DataIo.toUso(type);
 
-        Files.write(new File("map.uso").toPath(), uso.getBytes(StandardCharsets.UTF_8));
+        Files.write(file("map.uso").toPath(), uso.getBytes(StandardCharsets.UTF_8));
 
         MapType readMap;
         try {
@@ -50,7 +52,7 @@ class UsoReadWriteTests {
         System.out.println("Writing normal list data...");
         String uso = DataIo.toUso(list);
 
-        Files.write(new File("list.uso").toPath(), uso.getBytes(StandardCharsets.UTF_8));
+        Files.write(file("list.uso").toPath(), uso.getBytes(StandardCharsets.UTF_8));
 
         ListType<StringType> readList;
         try {
@@ -80,5 +82,115 @@ class UsoReadWriteTests {
         Assertions.assertEquals("x;", DataIo.toUso(new BitSetType(new BitSet())));
         Assertions.assertEquals("[\"Apple\"]", DataIo.toUso(new ListType<>(new StringType("Apple"))));
         Assertions.assertEquals("{}", DataIo.toUso(new MapType()));
+        Assertions.assertEquals("v2:i[2,4]", DataIo.toUso(new Vector2Type<>(new IntType(2), new IntType(4))));
+        Assertions.assertEquals("v3:i[2,4,6]", DataIo.toUso(new Vector3Type<>(new IntType(2), new IntType(4), new IntType(6))));
+        Assertions.assertEquals("v4:i[2,4,6,8]", DataIo.toUso(new Vector4Type<>(new IntType(2), new IntType(4), new IntType(6), new IntType(8))));
+    }
+
+    @Test
+    @DisplayName("VectorTypes")
+    void readWriteVector() throws IOException {
+        Vector2Type<IntType> vec2 = new Vector2Type<>(new IntType(2), new IntType(4));
+        Vector3Type<IntType> vec3 = new Vector3Type<>(new IntType(2), new IntType(4), new IntType(6));
+        Vector4Type<IntType> vec4 = new Vector4Type<>(new IntType(2), new IntType(4), new IntType(6), new IntType(8));
+
+        Assertions.assertEquals("v2:i[2,4]", DataIo.toUso(vec2));
+        Assertions.assertEquals("v3:i[2,4,6]", DataIo.toUso(vec3));
+        Assertions.assertEquals("v4:i[2,4,6,8]", DataIo.toUso(vec4));
+
+        Vector2Type<?> readVec2 = DataIo.fromUso("v2:i[2,4]");
+        Vector3Type<?> readVec3 = DataIo.fromUso("v3:i[2,4,6]");
+        Vector4Type<?> readVec4 = DataIo.fromUso("v4:i[2,4,6,8]");
+
+        Assertions.assertEquals(vec2, readVec2);
+        Assertions.assertEquals(vec3, readVec3);
+        Assertions.assertEquals(vec4, readVec4);
+
+        // Whitespace between the elements is optional.
+        Assertions.assertEquals(vec2, DataIo.fromUso("v2:i[ 2, 4 ]"));
+        Assertions.assertEquals(vec3, DataIo.fromUso("v3:i[2, 4,6]"));
+    }
+
+    @Test
+    @DisplayName("VectorElementTypes")
+    void readWriteVectorElementTypes() throws IOException {
+        Assertions.assertEquals("v2:b[1,2]", DataIo.toUso(new Vector2Type<>(new ByteType((byte) 1), new ByteType((byte) 2))));
+        Assertions.assertEquals("v2:s[1,2]", DataIo.toUso(new Vector2Type<>(new ShortType((short) 1), new ShortType((short) 2))));
+        Assertions.assertEquals("v2:i[1,2]", DataIo.toUso(new Vector2Type<>(new IntType(1), new IntType(2))));
+        Assertions.assertEquals("v2:l[1,2]", DataIo.toUso(new Vector2Type<>(new LongType(1L), new LongType(2L))));
+        Assertions.assertEquals("v2:f[1.5,2.5]", DataIo.toUso(new Vector2Type<>(new FloatType(1.5f), new FloatType(2.5f))));
+        Assertions.assertEquals("v2:d[1.5,2.5]", DataIo.toUso(new Vector2Type<>(new DoubleType(1.5), new DoubleType(2.5))));
+        Assertions.assertEquals("v2:I[1,2]", DataIo.toUso(new Vector2Type<>(new BigIntType(BigInteger.ONE), new BigIntType(BigInteger.valueOf(2)))));
+        Assertions.assertEquals("v2:D[1.5,2.5]", DataIo.toUso(new Vector2Type<>(new BigDecType(new BigDecimal("1.5")), new BigDecType(new BigDecimal("2.5")))));
+        Assertions.assertEquals("v2:c['a','b']", DataIo.toUso(new Vector2Type<>(new CharType('a'), new CharType('b'))));
+        Assertions.assertEquals("v2:t[\"Apple\",\"Banana\"]", DataIo.toUso(new Vector2Type<>(new StringType("Apple"), new StringType("Banana"))));
+        Assertions.assertEquals("v2:z[true,false]", DataIo.toUso(new Vector2Type<>(new BooleanType(true), new BooleanType(false))));
+
+        Vector2Type<?> readVec2 = DataIo.fromUso("v2:b[1,2]");
+        Assertions.assertEquals(new Vector2Type<>(new ByteType((byte) 1), new ByteType((byte) 2)), readVec2);
+
+        readVec2 = DataIo.fromUso("v2:s[1,2]");
+        Assertions.assertEquals(new Vector2Type<>(new ShortType((short) 1), new ShortType((short) 2)), readVec2);
+
+        readVec2 = DataIo.fromUso("v2:i[1,2]");
+        Assertions.assertEquals(new Vector2Type<>(new IntType(1), new IntType(2)), readVec2);
+
+        readVec2 = DataIo.fromUso("v2:l[1,2]");
+        Assertions.assertEquals(new Vector2Type<>(new LongType(1L), new LongType(2L)), readVec2);
+
+        readVec2 = DataIo.fromUso("v2:f[1.5,2.5]");
+        Assertions.assertEquals(new Vector2Type<>(new FloatType(1.5f), new FloatType(2.5f)), readVec2);
+
+        readVec2 = DataIo.fromUso("v2:d[1.5,2.5]");
+        Assertions.assertEquals(new Vector2Type<>(new DoubleType(1.5), new DoubleType(2.5)), readVec2);
+
+        readVec2 = DataIo.fromUso("v2:I[1,2]");
+        Assertions.assertEquals(new Vector2Type<>(new BigIntType(BigInteger.ONE), new BigIntType(BigInteger.valueOf(2))), readVec2);
+
+        readVec2 = DataIo.fromUso("v2:D[1.5,2.5]");
+        Assertions.assertEquals(new Vector2Type<>(new BigDecType(new BigDecimal("1.5")), new BigDecType(new BigDecimal("2.5"))), readVec2);
+
+        readVec2 = DataIo.fromUso("v2:c['a','b']");
+        Assertions.assertEquals(new Vector2Type<>(new CharType('a'), new CharType('b')), readVec2);
+
+        readVec2 = DataIo.fromUso("v2:t[\"Apple\",\"Banana\"]");
+        Assertions.assertEquals(new Vector2Type<>(new StringType("Apple"), new StringType("Banana")), readVec2);
+
+        readVec2 = DataIo.fromUso("v2:z[true,false]");
+        Assertions.assertEquals(new Vector2Type<>(new BooleanType(true), new BooleanType(false)), readVec2);
+    }
+
+    @Test
+    @DisplayName("VectorSpecialNumbers")
+    void readWriteVectorSpecialNumbers() throws IOException {
+        Vector2Type<IntType> negatives = new Vector2Type<>(new IntType(-2), new IntType(4));
+        Assertions.assertEquals("v2:i[-2,4]", DataIo.toUso(negatives));
+        Assertions.assertEquals(negatives, DataIo.fromUso("v2:i[-2,4]"));
+
+        Vector3Type<DoubleType> decimals = new Vector3Type<>(new DoubleType(-1.5), new DoubleType(0.0), new DoubleType(2.5E-3));
+        Assertions.assertEquals("v3:d[-1.5,0.0,0.0025]", DataIo.toUso(decimals));
+        Assertions.assertEquals(decimals, DataIo.fromUso("v3:d[-1.5,0.0,0.0025]"));
+        Assertions.assertEquals(decimals, DataIo.fromUso("v3:d[-1.5,0.0,2.5E-3]"));
+
+        Vector2Type<BigDecType> bigDecimals = new Vector2Type<>(new BigDecType(new BigDecimal("1.5")), new BigDecType(new BigDecimal("2.5")));
+        Assertions.assertEquals(bigDecimals, DataIo.fromUso("v2:D[1.5,2.5]"));
+    }
+
+    @Test
+    @DisplayName("InvalidVectors")
+    void readInvalidVector() {
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("v2:x[1,2]"), "unknown element type");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("v5:i[1,2]"), "unknown vector count");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("v2i[1,2]"), "missing element type");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("v2:i[1]"), "too few elements");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("v2:i[1,2,3]"), "too many elements");
+    }
+
+    @Test
+    @DisplayName("UnsupportedVectorElementTypes")
+    void writeUnsupportedVectorElementTypes() {
+        UUID uuid = UUID.fromString("00000000-0000-0000-0000-000000000000");
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> DataIo.toUso(new Vector2Type<>(new UUIDType(uuid), new UUIDType(uuid))));
     }
 }

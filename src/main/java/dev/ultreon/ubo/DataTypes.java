@@ -24,4 +24,7 @@ public class DataTypes {
     public static int BOOLEAN_ARRAY = 0x59;
     public static int UUID = 0x70;
     public static int BIT_SET = 0x80;
+    public static int VECTOR_2 = 0x90;
+    public static int VECTOR_3 = 0x91;
+    public static int VECTOR_4 = 0x92;
 }

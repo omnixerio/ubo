@@ -1,9 +1,8 @@
 package dev.ultreon.tests.data;
 
-import dev.ultreon.ubo.types.ListType;
-import dev.ultreon.ubo.types.MapType;
-import dev.ultreon.ubo.types.StringType;
+import dev.ultreon.ubo.types.*;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.BitSet;
@@ -41,6 +40,9 @@ public class Utils {
         type.putBoolean("booleanTrue", true);
         type.putBigInt("bigInteger", new BigInteger("9342759832409326583274320943265943209407326940327842163498"));
         type.putBigDec("bigDecimal", new BigDecimal("2480750435679032974329809463294032649281037216482019372198.547323843264398412730293619401264392837214982713626981326149213"));
+        type.put("vec2", new Vector2Type<>(new IntType(2), new IntType(4)));
+        type.put("vec3", new Vector3Type<>(new IntType(2), new IntType(4), new IntType(6)));
+        type.put("vec4", new Vector4Type<>(new IntType(2), new IntType(4), new IntType(6), new IntType(8)));
 
         MapType inner = new MapType();
         inner.putString("message", "Hello, Glitch.");
@@ -56,5 +58,13 @@ public class Utils {
         list.add(new StringType("UltreonTeam"));
         type.put("List", list);
         return type;
+    }
+
+    static File file(String name) {
+        File file = new File("build/test-tmp", name);
+        File parentFile = file.getParentFile();
+        if (!parentFile.exists())
+            parentFile.mkdirs();
+        return file;
     }
 }

@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+@Deprecated
 public interface Vector2Type<T, V> extends DataType<T>, VectorType<V> {
     V getX();
     V getY();

@@ -40,6 +40,9 @@ public class DataTypeRegistry {
         register(DataTypes.BOOLEAN_ARRAY, BooleanArrayType::read);
         register(DataTypes.UUID, UUIDType::read);
         register(DataTypes.BIT_SET, BitSetType::read);
+        register(DataTypes.VECTOR_2, Vector2Type::read);
+        register(DataTypes.VECTOR_3, Vector3Type::read);
+        register(DataTypes.VECTOR_4, Vector4Type::read);
     }
 
     public static void clear() {

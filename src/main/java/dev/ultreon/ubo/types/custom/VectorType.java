@@ -1,5 +1,6 @@
 package dev.ultreon.ubo.types.custom;
 
+@Deprecated
 public interface VectorType<V> extends Iterable<V> {
     int size();
 

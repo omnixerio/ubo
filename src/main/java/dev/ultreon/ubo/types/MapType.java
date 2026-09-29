@@ -457,7 +457,7 @@ public class MapType implements DataType<Map<String, DataType<?>>>, Map<String, 
             if (obj.type() != def.type()) {
                 return def;
             }
-            return obj.cast(def.componentType);
+            return obj.listCast(def.componentType);
         }
         return def;
     }

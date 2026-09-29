@@ -14,7 +14,7 @@ Assuming you use Gradle.
     
     // Add the dependency
     dependencies {
-         implementation 'dev.ultreon:ubo:1.6.0'
+         implementation 'dev.ultreon:ubo:1.7.0'
    
         // Or use the 1.6.0 snapshot
         implementation 'dev.ultreon:ubo:1.6.0-SNAPSHOT'
