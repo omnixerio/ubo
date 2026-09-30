@@ -6,7 +6,9 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
 import java.util.UUID;
 
 public class UsoParser {
@@ -52,22 +54,37 @@ public class UsoParser {
 
         if (read() != ':') throw new IOException("Invalid vector: expected ':' after size " + (char) size);
 
-        int elementType = read();
-        if (elementType == -1) throw new EOFException("Invalid vector: EOF, expected element type");
+        String elementType = readVectorElementType();
 
         switch ((char) size) {
             case '2':
-                return readVector(2, (char) elementType);
+                return readVector(2, elementType);
             case '3':
-                return readVector(3, (char) elementType);
+                return readVector(3, elementType);
             case '4':
-                return readVector(4, (char) elementType);
+                return readVector(4, elementType);
             default:
                 throw new IOException("Invalid vector count: " + (char) size);
         }
     }
 
-    private DataType<?> readVector(int size, char elementType) throws IOException {
+    /**
+     * Reads the element type of a vector, eg. {@code i} in {@code v2:i[2,4]}. Array elements carry the array's own
+     * element type as well, eg. {@code Ai} in {@code v2:Ai[(1,2),(3,4)]}.
+     */
+    private String readVectorElementType() throws IOException {
+        int read = read();
+        if (read == -1) throw new EOFException("Invalid vector: EOF, expected element type");
+
+        if (read != VectorType.USO_ELEMENT_ARRAY.charAt(0)) return String.valueOf((char) read);
+
+        int arrayType = read();
+        if (arrayType == -1) throw new EOFException("Invalid vector: EOF, expected array element type");
+
+        return VectorType.USO_ELEMENT_ARRAY + (char) arrayType;
+    }
+
+    private DataType<?> readVector(int size, String elementType) throws IOException {
         String vector = "v" + size;
         if (read() != '[') throw new IOException("Invalid " + vector + ": expected '['");
 
@@ -91,32 +108,133 @@ public class UsoParser {
         }
     }
 
-    private DataType<?> readVectorElement(char type) throws IOException {
-        switch (type) {
-            case 'b':
+    private DataType<?> readVectorElement(String elementType) throws IOException {
+        switch (elementType) {
+            case "b":
                 return new ByteType(Byte.parseByte(readNumberText()));
-            case 'z':
+            case "z":
                 return readBoolean();
-            case 's':
+            case "s":
                 return new ShortType(Short.parseShort(readNumberText()));
-            case 'i':
+            case "i":
                 return new IntType(Integer.parseInt(readNumberText()));
-            case 'l':
+            case "l":
                 return new LongType(Long.parseLong(readNumberText()));
-            case 'f':
+            case "f":
                 return new FloatType(Float.parseFloat(readNumberText()));
-            case 'd':
+            case "d":
                 return new DoubleType(Double.parseDouble(readNumberText()));
-            case 'I':
+            case "I":
                 return new BigIntType(new BigInteger(readNumberText()));
-            case 'D':
+            case "D":
                 return new BigDecType(new BigDecimal(readNumberText()));
-            case 'c':
+            case "c":
                 return readCharElement();
-            case 't':
+            case "t":
                 return readText();
+            case VectorType.USO_ELEMENT_MAP:
+                return readCompositeElement(MapType.class);
+            case VectorType.USO_ELEMENT_LIST:
+                return readCompositeElement(ListType.class);
+            case VectorType.USO_ELEMENT_VECTOR:
+                return readCompositeElement(VectorType.class);
             default:
-                throw new IOException("Invalid vector element type: " + type);
+                if (elementType.startsWith(VectorType.USO_ELEMENT_ARRAY)) {
+                    return readArrayElement(elementType.charAt(1));
+                }
+                throw new IOException("Invalid vector element type: " + elementType);
+        }
+    }
+
+    /**
+     * Reads a map, list or vector element of a vector, which are written as complete USO values, including their own
+     * type marker, eg. {@code {"a":1i}} in {@code v2:M[{"a":1i},{"a":2i}]}.
+     */
+    private DataType<?> readCompositeElement(Class<?> expected) throws IOException {
+        DataType<?> element = readUso();
+        if (!expected.isInstance(element)) {
+            throw new IOException("Invalid vector element: expected " + expected.getSimpleName() + " but got " + element);
+        }
+
+        return element;
+    }
+
+    /**
+     * Reads an array element of a vector, which only carries its values, since the array's element type is part of
+     * the vector's element type, eg. {@code (1,2)} in {@code v2:Ai[(1,2),(3,4)]}.
+     */
+    private DataType<?> readArrayElement(char valueType) throws IOException {
+        if (read() != '(') throw new IOException("Invalid array element: expected '('");
+
+        List<DataType<?>> values = new ArrayList<>();
+        readWhitespace();
+        int next = read();
+        if (next == ')') {
+            return createArrayElement(valueType, values);
+        }
+        unread();
+
+        while (true) {
+            values.add(readVectorElement(String.valueOf(valueType)));
+
+            readWhitespace();
+            int read = read();
+            if (read == ',') {
+                readWhitespace();
+                continue;
+            }
+            if (read == ')') break;
+            throw new IOException("Invalid array element: expected ',' or ')' but got " + (char) read);
+        }
+
+        return createArrayElement(valueType, values);
+    }
+
+    private DataType<?> createArrayElement(char valueType, List<DataType<?>> values) throws IOException {
+        int size = values.size();
+        switch (valueType) {
+            case 'b': {
+                byte[] array = new byte[size];
+                for (int i = 0; i < size; i++) array[i] = ((ByteType) values.get(i)).getByteValue();
+                return new ByteArrayType(array);
+            }
+            case 's': {
+                short[] array = new short[size];
+                for (int i = 0; i < size; i++) array[i] = ((ShortType) values.get(i)).getShortValue();
+                return new ShortArrayType(array);
+            }
+            case 'i': {
+                int[] array = new int[size];
+                for (int i = 0; i < size; i++) array[i] = ((IntType) values.get(i)).getIntValue();
+                return new IntArrayType(array);
+            }
+            case 'l': {
+                long[] array = new long[size];
+                for (int i = 0; i < size; i++) array[i] = ((LongType) values.get(i)).getLongValue();
+                return new LongArrayType(array);
+            }
+            case 'f': {
+                float[] array = new float[size];
+                for (int i = 0; i < size; i++) array[i] = ((FloatType) values.get(i)).getFloatValue();
+                return new FloatArrayType(array);
+            }
+            case 'd': {
+                double[] array = new double[size];
+                for (int i = 0; i < size; i++) array[i] = ((DoubleType) values.get(i)).getDoubleValue();
+                return new DoubleArrayType(array);
+            }
+            case 'c': {
+                char[] array = new char[size];
+                for (int i = 0; i < size; i++) array[i] = ((CharType) values.get(i)).getCharValue();
+                return new CharArrayType(array);
+            }
+            case 'z': {
+                boolean[] array = new boolean[size];
+                for (int i = 0; i < size; i++) array[i] = ((BooleanType) values.get(i)).getBooleanValue();
+                return new BooleanArrayType(array);
+            }
+            default:
+                throw new IOException("Invalid array element type: " + valueType);
         }
     }
 
@@ -219,9 +337,26 @@ public class UsoParser {
             case 'c':
                 if (read() != ';') throw new IOException("Invalid array: expected ';'");
                 return readCharArray();
+            case 'z':
+                if (read() != ';') throw new IOException("Invalid array: expected ';'");
+                return readBooleanArray();
             default:
                 throw new IOException("Invalid array");
         }
+    }
+
+    private BooleanArrayType readBooleanArray() throws IOException {
+        boolean[] booleans = new boolean[0];
+        while (true) {
+            booleans = add(booleans, ((BooleanType) readBoolean()).getBooleanValue());
+
+            int r = read();
+            if (r == ',') continue;
+            if (r == ')') break;
+            throw new IOException("Invalid array: expected ',' or ')' but got " + (char) r);
+        }
+
+        return new BooleanArrayType(booleans);
     }
 
     private CharArrayType readCharArray() throws IOException {
@@ -523,6 +658,13 @@ public class UsoParser {
         return newBytes;
     }
 
+    private boolean[] add(boolean[] bytes, boolean number) {
+        boolean[] newBytes = new boolean[bytes.length + 1];
+        System.arraycopy(bytes, 0, newBytes, 0, bytes.length);
+        newBytes[bytes.length] = number;
+        return newBytes;
+    }
+
     private BitSetType readBitSet() throws IOException {
         BitSet set = new BitSet();
         int i = 0;
@@ -656,7 +798,6 @@ public class UsoParser {
                 readWhitespace();
                 read = read();
                 if (read == '}') {
-                    read();
                     break;
                 }
             } else if (read == '}') {

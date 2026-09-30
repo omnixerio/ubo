@@ -187,6 +187,107 @@ class UsoReadWriteTests {
     }
 
     @Test
+    @DisplayName("VectorMapElements")
+    void readWriteVectorMapElements() throws IOException {
+        MapType first = new MapType();
+        first.putInt("x", 2);
+
+        MapType second = new MapType();
+        second.putInt("x", 4);
+
+        Vector2Type<MapType> vector = new Vector2Type<>(first, second);
+        Assertions.assertEquals("v2:M[{\"x\": 2i, },{\"x\": 4i, }]", DataIo.toUso(vector));
+        Assertions.assertEquals(vector, DataIo.fromUso("v2:M[{\"x\": 2i, },{\"x\": 4i, }]"));
+        Assertions.assertEquals(vector, DataIo.fromUso("v2:M[{\"x\": 2i},{\"x\": 4i}]"));
+
+        MapType multiple = new MapType();
+        multiple.putInt("x", 2);
+        multiple.putString("name", "Apple");
+
+        Vector2Type<MapType> withMultipleEntries = new Vector2Type<>(multiple, multiple.copy());
+        Assertions.assertEquals(withMultipleEntries, DataIo.fromUso(DataIo.toUso(withMultipleEntries)));
+
+        Vector3Type<MapType> nested = new Vector3Type<>(first, second, first.copy());
+        Assertions.assertEquals(nested, DataIo.fromUso(DataIo.toUso(nested)));
+    }
+
+    @Test
+    @DisplayName("VectorListElements")
+    void readWriteVectorListElements() throws IOException {
+        ListType<IntType> first = new ListType<>(new IntType(1), new IntType(2));
+        ListType<StringType> second = new ListType<>(new StringType("Apple"), new StringType("Banana"));
+
+        Vector2Type<ListType<?>> vector = new Vector2Type<>(first, second);
+        Assertions.assertEquals("v2:L[[1i, 2i],[\"Apple\", \"Banana\"]]", DataIo.toUso(vector));
+        Assertions.assertEquals(vector, DataIo.fromUso("v2:L[[1i,2i],[\"Apple\",\"Banana\"]]"));
+
+        Vector4Type<ListType<IntType>> uniform = new Vector4Type<>(
+                new ListType<>(new IntType(1), new IntType(2)),
+                new ListType<>(new IntType(3), new IntType(4)),
+                new ListType<>(new IntType(5), new IntType(6)),
+                new ListType<>(new IntType(7), new IntType(8)));
+        Assertions.assertEquals("v4:L[[1i, 2i],[3i, 4i],[5i, 6i],[7i, 8i]]", DataIo.toUso(uniform));
+        Assertions.assertEquals(uniform, DataIo.fromUso(DataIo.toUso(uniform)));
+    }
+
+    @Test
+    @DisplayName("VectorArrayElements")
+    void readWriteVectorArrayElements() throws IOException {
+        Vector2Type<IntArrayType> ints = new Vector2Type<>(new IntArrayType(new int[]{1, 2}), new IntArrayType(new int[]{3, 4}));
+        Assertions.assertEquals("v2:Ai[(1,2),(3,4)]", DataIo.toUso(ints));
+        Assertions.assertEquals(ints, DataIo.fromUso("v2:Ai[(1, 2),(3, 4)]"));
+
+        Vector2Type<ByteArrayType> bytes = new Vector2Type<>(new ByteArrayType(new byte[]{1, -2}), new ByteArrayType(new byte[]{3}));
+        Assertions.assertEquals("v2:Ab[(1,-2),(3)]", DataIo.toUso(bytes));
+        Assertions.assertEquals(bytes, DataIo.fromUso("v2:Ab[(1,-2),(3)]"));
+
+        Vector3Type<CharArrayType> chars = new Vector3Type<>(
+                new CharArrayType(new char[]{'a', '\''}),
+                new CharArrayType(new char[]{'b'}),
+                new CharArrayType(new char[]{'c', 'd'}));
+        Assertions.assertEquals("v3:Ac[('a','\\''),('b'),('c','d')]", DataIo.toUso(chars));
+        Assertions.assertEquals(chars, DataIo.fromUso(DataIo.toUso(chars)));
+
+        Vector2Type<BooleanArrayType> booleans = new Vector2Type<>(new BooleanArrayType(new boolean[]{true, false}), new BooleanArrayType(new boolean[]{false}));
+        Assertions.assertEquals("v2:Az[(true,false),(false)]", DataIo.toUso(booleans));
+        Assertions.assertEquals(booleans, DataIo.fromUso(DataIo.toUso(booleans)));
+
+        Vector2Type<DoubleArrayType> doubles = new Vector2Type<>(new DoubleArrayType(new double[]{-1.5, 2.0}), new DoubleArrayType(new double[]{0.0}));
+        Assertions.assertEquals("v2:Ad[(-1.5,2.0),(0.0)]", DataIo.toUso(doubles));
+        Assertions.assertEquals(doubles, DataIo.fromUso(DataIo.toUso(doubles)));
+
+        Vector2Type<IntArrayType> empty = new Vector2Type<>(new IntArrayType(new int[0]), new IntArrayType(new int[]{1}));
+        Assertions.assertEquals("v2:Ai[(),(1)]", DataIo.toUso(empty));
+        Assertions.assertEquals(empty, DataIo.fromUso(DataIo.toUso(empty)));
+    }
+
+    @Test
+    @DisplayName("VectorVectorElements")
+    void readWriteVectorVectorElements() throws IOException {
+        Vector2Type<Vector2Type<IntType>> vector = new Vector2Type<>(
+                new Vector2Type<>(new IntType(1), new IntType(2)),
+                new Vector2Type<>(new IntType(3), new IntType(4)));
+        Assertions.assertEquals("v2:V[v2:i[1,2],v2:i[3,4]]", DataIo.toUso(vector));
+        Assertions.assertEquals(vector, DataIo.fromUso("v2:V[v2:i[1,2],v2:i[3,4]]"));
+
+        Vector2Type<Vector3Type<MapType>> mixed = new Vector2Type<>(
+                new Vector3Type<>(new MapType("a", new IntType(1)), new MapType("a", new IntType(2)), new MapType("a", new IntType(3))),
+                new Vector3Type<>(new MapType("a", new IntType(4)), new MapType("a", new IntType(5)), new MapType("a", new IntType(6))));
+        Assertions.assertEquals(mixed, DataIo.fromUso(DataIo.toUso(mixed)));
+    }
+
+    @Test
+    @DisplayName("InvalidVectorElementValues")
+    void readInvalidVectorElementValues() {
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("v2:M[1i,2i]"), "int instead of map");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("v2:L[1i,2i]"), "int instead of list");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("v2:V[1i,2i]"), "int instead of vector");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("v2:Ai[1i,2i]"), "int instead of array");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("v2:Aq[(1,2),(3,4)]"), "unknown array element type");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("v2:Ai[(1,\"a\")]"), "mismatching array element types");
+    }
+
+    @Test
     @DisplayName("UnsupportedVectorElementTypes")
     void writeUnsupportedVectorElementTypes() {
         UUID uuid = UUID.fromString("00000000-0000-0000-0000-000000000000");
