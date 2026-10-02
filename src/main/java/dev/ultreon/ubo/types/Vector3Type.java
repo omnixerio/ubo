@@ -220,7 +220,7 @@ public class Vector3Type<T extends DataType<?>> implements VectorType<T>, DataTy
 
     @Override
     public String writeUso() {
-        return "v3:" + VectorType.writeUsoElementType(getX()) + "[" + VectorType.writeUsoElement(getX()) + "," + VectorType.writeUsoElement(getY()) + "," + VectorType.writeUsoElement(getZ()) + "]";
+        return VectorType.writeUsoVector(this);
     }
 
     @Override

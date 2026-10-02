@@ -239,7 +239,7 @@ public class Vector4Type<T extends DataType<?>> implements VectorType<T>, DataTy
 
     @Override
     public String writeUso() {
-        return "v4:" + VectorType.writeUsoElementType(getX()) + "[" + VectorType.writeUsoElement(getX()) + "," + VectorType.writeUsoElement(getY()) + "," + VectorType.writeUsoElement(getZ()) + "," + VectorType.writeUsoElement(getW()) + "]";
+        return VectorType.writeUsoVector(this);
     }
 
     @Override

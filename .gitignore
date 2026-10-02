@@ -42,3 +42,8 @@ bin/
 ### Misc ###
 .profileconfig.json
 *.jfr
+*.tmp
+*.temp
+.tmp/
+.temp/
+.cache/

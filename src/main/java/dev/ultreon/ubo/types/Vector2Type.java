@@ -201,7 +201,7 @@ public class Vector2Type<T extends DataType<?>> implements VectorType<T>, DataTy
 
     @Override
     public String writeUso() {
-        return "v2:" + VectorType.writeUsoElementType(getX()) + "[" + VectorType.writeUsoElement(getX()) + "," + VectorType.writeUsoElement(getY()) + "]";
+        return VectorType.writeUsoVector(this);
     }
 
     @Override
