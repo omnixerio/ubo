@@ -80,14 +80,30 @@ public class UsoParser {
 
         switch ((char) size) {
             case '2':
-                return readGenericVector(2, (char) elementType);
+                return readGenericVector(2, elementType);
             case '3':
-                return readGenericVector(3, (char) elementType);
+                return readGenericVector(3, elementType);
             case '4':
-                return readGenericVector(4, (char) elementType);
+                return readGenericVector(4, elementType);
             default:
                 throw new IOException("Invalid vector count: " + (char) size);
         }
+    }
+
+    /**
+     * Reads the element type of a vector, eg. {@code i} in {@code v2:i[2,4]}. Array elements carry the array's own
+     * element type as well, eg. {@code Ai} in {@code v2:Ai[(1,2),(3,4)]}.
+     */
+    private String readVectorElementType() throws IOException {
+        int read = read();
+        if (read == -1) throw new EOFException("Invalid vector: EOF, expected element type");
+
+        if (read != VectorType.USO_ELEMENT_ARRAY.charAt(0)) return String.valueOf((char) read);
+
+        int arrayType = read();
+        if (arrayType == -1) throw new EOFException("Invalid vector: EOF, expected array element type");
+
+        return VectorType.USO_ELEMENT_ARRAY + (char) arrayType;
     }
 
     /**
@@ -170,7 +186,7 @@ public class UsoParser {
     /**
      * Reads a vector of arbitrary data types, written as {@code v<size>:<type>[...]}, eg. {@code v2:i[2,4]}.
      */
-    private DataType<?> readGenericVector(int size, char elementType) throws IOException {
+    private DataType<?> readGenericVector(int size, String elementType) throws IOException {
         String vector = "v" + size;
         if (read() != '[') throw new IOException("Invalid " + vector + ": expected '['");
 
