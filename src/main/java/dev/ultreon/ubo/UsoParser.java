@@ -1,6 +1,7 @@
 package dev.ultreon.ubo;
 
 import dev.ultreon.ubo.types.*;
+import dev.ultreon.ubo.types.vector.*;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -37,15 +38,36 @@ public class UsoParser {
             case 'x':
                 return readBitSet();
             case 't':
+                this.unread();
+                return readBoolean();
             case 'f':
+                // f is ambiguous, since it's the start of both "false" and "fvec<count>".
+                if (isNumericVectorStart()) return readNumericVector();
                 this.unread();
                 return readBoolean();
             case 'v':
                 return readVector();
+            case 'i':
+            case 'l':
+            case 'd':
+                if (isNumericVectorStart()) return readNumericVector();
+                throw new IOException("Invalid USO: " + (char) read);
             default:
                 if (Character.isDigit(read)) return readNumber(read);
                 throw new IOException("Invalid USO: " + (char) read);
         }
+    }
+
+    /**
+     * Checks whether the position right after the read element type marker is followed by {@code vec<count>},
+     * eg. {@code vec2[1,2]}.
+     */
+    private boolean isNumericVectorStart() {
+        if (this.pos + 4 > this.chars.length) return false;
+        if (!"vec".contentEquals(String.valueOf(this.chars, this.pos, 3))) return false;
+
+        char size = this.chars[this.pos + 3];
+        return size == '2' || size == '3' || size == '4';
     }
 
     private DataType<?> readVector() throws IOException {
@@ -58,33 +80,97 @@ public class UsoParser {
 
         switch ((char) size) {
             case '2':
-                return readVector(2, elementType);
+                return readGenericVector(2, (char) elementType);
             case '3':
-                return readVector(3, elementType);
+                return readGenericVector(3, (char) elementType);
             case '4':
-                return readVector(4, elementType);
+                return readGenericVector(4, (char) elementType);
             default:
                 throw new IOException("Invalid vector count: " + (char) size);
         }
     }
 
     /**
-     * Reads the element type of a vector, eg. {@code i} in {@code v2:i[2,4]}. Array elements carry the array's own
-     * element type as well, eg. {@code Ai} in {@code v2:Ai[(1,2),(3,4)]}.
+     * Reads a vector of numbers of a single type, written as {@code <type>vec<size>[...]}, eg. {@code ivec2[2,4]}.
+     * <p>
+     * Such a vector is a data type of its own, so its element type doesn't need a type marker next to it. The
+     * element type marker is expected to have been read already.
      */
-    private String readVectorElementType() throws IOException {
-        int read = read();
-        if (read == -1) throw new EOFException("Invalid vector: EOF, expected element type");
+    private DataType<?> readNumericVector() throws IOException {
+        char elementType = this.chars[this.pos - 1];
+        this.pos += 3; // The 'vec' marker, already checked by isNumericVectorStart().
 
-        if (read != VectorType.USO_ELEMENT_ARRAY.charAt(0)) return String.valueOf((char) read);
+        int size = read();
+        String vector = elementType + "vec" + (char) size;
 
-        int arrayType = read();
-        if (arrayType == -1) throw new EOFException("Invalid vector: EOF, expected array element type");
+        if (read() != '[') throw new IOException("Invalid " + vector + ": expected '['");
 
-        return VectorType.USO_ELEMENT_ARRAY + (char) arrayType;
+        String[] elements = new String[size - '0'];
+        for (int i = 0; i < elements.length; i++) {
+            readWhitespace();
+            elements[i] = readNumberText();
+            readWhitespace();
+            if (i + 1 < elements.length && read() != ',') throw new IOException("Invalid " + vector + ": expected ',' after element " + i);
+        }
+
+        if (read() != ']') throw new IOException("Invalid " + vector + ": expected ']'");
+
+        switch (elementType) {
+            case 'i': {
+                int x = Integer.parseInt(elements[0]);
+                int y = Integer.parseInt(elements[1]);
+                switch (size) {
+                    case '2':
+                        return new IntVector2Type(x, y);
+                    case '3':
+                        return new IntVector3Type(x, y, Integer.parseInt(elements[2]));
+                    default:
+                        return new IntVector4Type(x, y, Integer.parseInt(elements[2]), Integer.parseInt(elements[3]));
+                }
+            }
+            case 'l': {
+                long x = Long.parseLong(elements[0]);
+                long y = Long.parseLong(elements[1]);
+                switch (size) {
+                    case '2':
+                        return new LongVector2Type(x, y);
+                    case '3':
+                        return new LongVector3Type(x, y, Long.parseLong(elements[2]));
+                    default:
+                        return new LongVector4Type(x, y, Long.parseLong(elements[2]), Long.parseLong(elements[3]));
+                }
+            }
+            case 'f': {
+                float x = Float.parseFloat(elements[0]);
+                float y = Float.parseFloat(elements[1]);
+                switch (size) {
+                    case '2':
+                        return new FloatVector2Type(x, y);
+                    case '3':
+                        return new FloatVector3Type(x, y, Float.parseFloat(elements[2]));
+                    default:
+                        return new FloatVector4Type(x, y, Float.parseFloat(elements[2]), Float.parseFloat(elements[3]));
+                }
+            }
+            default: {
+                double x = Double.parseDouble(elements[0]);
+                double y = Double.parseDouble(elements[1]);
+                switch (size) {
+                    case '2':
+                        return new DoubleVector2Type(x, y);
+                    case '3':
+                        return new DoubleVector3Type(x, y, Double.parseDouble(elements[2]));
+                    default:
+                        return new DoubleVector4Type(x, y, Double.parseDouble(elements[2]), Double.parseDouble(elements[3]));
+                }
+            }
+        }
     }
 
-    private DataType<?> readVector(int size, String elementType) throws IOException {
+    /**
+     * Reads a vector of arbitrary data types, written as {@code v<size>:<type>[...]}, eg. {@code v2:i[2,4]}.
+     */
+    private DataType<?> readGenericVector(int size, char elementType) throws IOException {
         String vector = "v" + size;
         if (read() != '[') throw new IOException("Invalid " + vector + ": expected '['");
 

@@ -2,6 +2,7 @@ package dev.ultreon.tests.data;
 
 import dev.ultreon.ubo.DataIo;
 import dev.ultreon.ubo.types.*;
+import dev.ultreon.ubo.types.vector.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -158,6 +159,99 @@ class UsoReadWriteTests {
 
         readVec2 = DataIo.fromUso("v2:z[true,false]");
         Assertions.assertEquals(new Vector2Type<>(new BooleanType(true), new BooleanType(false)), readVec2);
+    }
+
+    @Test
+    @DisplayName("NumericVectorTypes")
+    void readWriteNumericVector() throws IOException {
+        IntVector2Type ivec2 = new IntVector2Type(2, 4);
+        IntVector3Type ivec3 = new IntVector3Type(2, 4, 6);
+        IntVector4Type ivec4 = new IntVector4Type(2, 4, 6, 8);
+
+        Assertions.assertEquals("ivec2[2,4]", DataIo.toUso(ivec2));
+        Assertions.assertEquals("ivec3[2,4,6]", DataIo.toUso(ivec3));
+        Assertions.assertEquals("ivec4[2,4,6,8]", DataIo.toUso(ivec4));
+
+        Assertions.assertEquals(ivec2, DataIo.fromUso("ivec2[2,4]"));
+        Assertions.assertEquals(ivec3, DataIo.fromUso("ivec3[2,4,6]"));
+        Assertions.assertEquals(ivec4, DataIo.fromUso("ivec4[2,4,6,8]"));
+
+        // Whitespace between the elements is optional.
+        Assertions.assertEquals(ivec2, DataIo.fromUso("ivec2[ 2, 4 ]"));
+        Assertions.assertEquals(ivec3, DataIo.fromUso("ivec3[2, 4,6]"));
+    }
+
+    @Test
+    @DisplayName("NumericVectorElementTypes")
+    void readWriteNumericVectorElementTypes() throws IOException {
+        Assertions.assertEquals("lvec2[1,2]", DataIo.toUso(new LongVector2Type(1L, 2L)));
+        Assertions.assertEquals("fvec2[1.5,2.5]", DataIo.toUso(new FloatVector2Type(1.5f, 2.5f)));
+        Assertions.assertEquals("dvec2[1.5,2.5]", DataIo.toUso(new DoubleVector2Type(1.5, 2.5)));
+
+        Assertions.assertEquals("lvec3[1,2,3]", DataIo.toUso(new LongVector3Type(1L, 2L, 3L)));
+        Assertions.assertEquals("fvec3[1.5,2.5,3.5]", DataIo.toUso(new FloatVector3Type(1.5f, 2.5f, 3.5f)));
+        Assertions.assertEquals("dvec3[1.5,2.5,3.5]", DataIo.toUso(new DoubleVector3Type(1.5, 2.5, 3.5)));
+
+        Assertions.assertEquals("lvec4[1,2,3,4]", DataIo.toUso(new LongVector4Type(1L, 2L, 3L, 4L)));
+        Assertions.assertEquals("fvec4[1.5,2.5,3.5,4.5]", DataIo.toUso(new FloatVector4Type(1.5f, 2.5f, 3.5f, 4.5f)));
+        Assertions.assertEquals("dvec4[1.5,2.5,3.5,4.5]", DataIo.toUso(new DoubleVector4Type(1.5, 2.5, 3.5, 4.5)));
+
+        Assertions.assertEquals(new LongVector2Type(1L, 2L), DataIo.fromUso("lvec2[1,2]"));
+        Assertions.assertEquals(new FloatVector2Type(1.5f, 2.5f), DataIo.fromUso("fvec2[1.5,2.5]"));
+        Assertions.assertEquals(new DoubleVector2Type(1.5, 2.5), DataIo.fromUso("dvec2[1.5,2.5]"));
+
+        Assertions.assertEquals(new LongVector3Type(1L, 2L, 3L), DataIo.fromUso("lvec3[1,2,3]"));
+        Assertions.assertEquals(new FloatVector3Type(1.5f, 2.5f, 3.5f), DataIo.fromUso("fvec3[1.5,2.5,3.5]"));
+        Assertions.assertEquals(new DoubleVector3Type(1.5, 2.5, 3.5), DataIo.fromUso("dvec3[1.5,2.5,3.5]"));
+
+        Assertions.assertEquals(new LongVector4Type(1L, 2L, 3L, 4L), DataIo.fromUso("lvec4[1,2,3,4]"));
+        Assertions.assertEquals(new FloatVector4Type(1.5f, 2.5f, 3.5f, 4.5f), DataIo.fromUso("fvec4[1.5,2.5,3.5,4.5]"));
+        Assertions.assertEquals(new DoubleVector4Type(1.5, 2.5, 3.5, 4.5), DataIo.fromUso("dvec4[1.5,2.5,3.5,4.5]"));
+    }
+
+    @Test
+    @DisplayName("NumericVectorSpecialNumbers")
+    void readWriteNumericVectorSpecialNumbers() throws IOException {
+        IntVector2Type negatives = new IntVector2Type(-2, 4);
+        Assertions.assertEquals("ivec2[-2,4]", DataIo.toUso(negatives));
+        Assertions.assertEquals(negatives, DataIo.fromUso("ivec2[-2,4]"));
+
+        DoubleVector3Type decimals = new DoubleVector3Type(-1.5, 0.0, 2.5E-3);
+        Assertions.assertEquals("dvec3[-1.5,0.0,0.0025]", DataIo.toUso(decimals));
+        Assertions.assertEquals(decimals, DataIo.fromUso("dvec3[-1.5,0.0,0.0025]"));
+        Assertions.assertEquals(decimals, DataIo.fromUso("dvec3[-1.5,0.0,2.5E-3]"));
+
+        LongVector3Type bounds = new LongVector3Type(Long.MIN_VALUE, 0L, Long.MAX_VALUE);
+        Assertions.assertEquals("lvec3[" + Long.MIN_VALUE + ",0," + Long.MAX_VALUE + "]", DataIo.toUso(bounds));
+        Assertions.assertEquals(bounds, DataIo.fromUso("lvec3[" + Long.MIN_VALUE + ",0," + Long.MAX_VALUE + "]"));
+    }
+
+    @Test
+    @DisplayName("InvalidNumericVectors")
+    void readInvalidNumericVector() throws IOException {
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("ivec2[1]"), "too few elements");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("ivec2[1,2,3]"), "too many elements");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("ivec5[1,2]"), "unknown vector count");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("ivec2 1,2]"), "missing bracket");
+        Assertions.assertThrows(IOException.class, () -> DataIo.fromUso("ivec2[1 2]"), "missing comma");
+
+        // A boolean starts with the same character as a float vector.
+        Assertions.assertEquals(new BooleanType(false), DataIo.fromUso("false"));
+        Assertions.assertEquals(new FloatVector2Type(1.5f, 2.5f), DataIo.fromUso("fvec2[1.5,2.5]"));
+    }
+
+    @Test
+    @DisplayName("NumericVectorLists")
+    void readWriteNumericVectorList() throws IOException {
+        ListType<IntVector2Type> list = new ListType<>(IntVector2Type.class);
+        list.add(new IntVector2Type(1, 2));
+        list.add(new IntVector2Type(3, 4));
+
+        String uso = DataIo.toUso(list);
+        Files.write(file("ivec2-list.uso").toPath(), uso.getBytes(StandardCharsets.UTF_8));
+
+        Assertions.assertEquals("[ivec2[1,2], ivec2[3,4]]", uso);
+        Assertions.assertEquals(list, DataIo.fromUso(uso));
     }
 
     @Test

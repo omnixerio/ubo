@@ -13,7 +13,7 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public class DataIo {
-    private static final short VERSION = 5;
+    private static final short VERSION = 6;
     private static final int HEADER = 0xff804269;
     private static final int BUFFER_SIZE = 4096;
 
@@ -317,5 +317,9 @@ public class DataIo {
 
     private static DataType<?> readUso(String value) throws IOException {
         return new UsoParser(value).parse();
+    }
+
+    public static int getCurrentVersion() {
+        return VERSION;
     }
 }

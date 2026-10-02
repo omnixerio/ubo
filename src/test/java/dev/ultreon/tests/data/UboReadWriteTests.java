@@ -2,6 +2,7 @@ package dev.ultreon.tests.data;
 
 import dev.ultreon.ubo.DataIo;
 import dev.ultreon.ubo.types.*;
+import dev.ultreon.ubo.types.vector.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -109,6 +110,68 @@ class UboReadWriteTests {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Test
+    @DisplayName("NumericVectorTypes")
+    void readWriteNumericVectors() {
+        try {
+            UboReadWriteTests.readWriteTest(() -> new IntVector2Type(2, 4), file("ivec2.ubo"));
+            UboReadWriteTests.readWriteTest(() -> new IntVector3Type(2, 4, 6), file("ivec3.ubo"));
+            UboReadWriteTests.readWriteTest(() -> new IntVector4Type(2, 4, 6, 8), file("ivec4.ubo"));
+
+            UboReadWriteTests.readWriteTest(() -> new LongVector2Type(2L, 4L), file("lvec2.ubo"));
+            UboReadWriteTests.readWriteTest(() -> new LongVector3Type(2L, 4L, 6L), file("lvec3.ubo"));
+            UboReadWriteTests.readWriteTest(() -> new LongVector4Type(2L, 4L, 6L, 8L), file("lvec4.ubo"));
+
+            UboReadWriteTests.readWriteTest(() -> new FloatVector2Type(1.5f, 2.5f), file("fvec2.ubo"));
+            UboReadWriteTests.readWriteTest(() -> new FloatVector3Type(1.5f, 2.5f, 3.5f), file("fvec3.ubo"));
+            UboReadWriteTests.readWriteTest(() -> new FloatVector4Type(1.5f, 2.5f, 3.5f, 4.5f), file("fvec4.ubo"));
+
+            UboReadWriteTests.readWriteTest(() -> new DoubleVector2Type(1.5, 2.5), file("dvec2.ubo"));
+            UboReadWriteTests.readWriteTest(() -> new DoubleVector3Type(1.5, 2.5, 3.5), file("dvec3.ubo"));
+            UboReadWriteTests.readWriteTest(() -> new DoubleVector4Type(1.5, 2.5, 3.5, 4.5), file("dvec4.ubo"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    @DisplayName("NumericVectorSpecialNumbers")
+    void readWriteNumericVectorSpecialNumbers() {
+        try {
+            UboReadWriteTests.readWriteTest(() -> new IntVector2Type(Integer.MIN_VALUE, Integer.MAX_VALUE), file("ivec2-bounds.ubo"));
+            UboReadWriteTests.readWriteTest(() -> new LongVector3Type(Long.MIN_VALUE, 0L, Long.MAX_VALUE), file("lvec3-bounds.ubo"));
+            UboReadWriteTests.readWriteTest(() -> new FloatVector4Type(-0.0f, Float.MIN_VALUE, Float.MAX_VALUE, Float.POSITIVE_INFINITY), file("fvec4-specials.ubo"));
+            UboReadWriteTests.readWriteTest(() -> new DoubleVector4Type(-0.0, Double.MIN_VALUE, Double.MAX_VALUE, Double.NEGATIVE_INFINITY), file("dvec4-specials.ubo"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    @DisplayName("NumericVectorLists")
+    void readWriteNumericVectorLists() {
+        ListType<IntVector2Type> list = new ListType<>(IntVector2Type.class);
+        list.add(new IntVector2Type(1, 2));
+        list.add(new IntVector2Type(3, 4));
+        list.add(new IntVector2Type(5, 6));
+
+        try {
+            System.out.println("Writing numeric vector list data...");
+            DataIo.write(list, file("ivec2-list.ubo"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        ListType<IntVector2Type> readList;
+        try {
+            System.out.println("Reading numeric vector list data...");
+            readList = DataIo.read(file("ivec2-list.ubo"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        Assertions.assertEquals(list, readList);
     }
 
     @Test
