@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+@SuppressWarnings("DuplicatedCode")
 public class DataIo {
     private static final short VERSION = 6;
     private static final int HEADER = 0xff804269;
@@ -68,25 +69,26 @@ public class DataIo {
      * @throws IOException when an I/O error occurs.
      * @throws DataTypeException when the read data type is invalid.
      */
+    @SuppressWarnings("unchecked")
     @SafeVarargs
     public static <T extends DataType<?>> T read(DataInput input, T... type) throws IOException {
         int magic = input.readInt();
-        if (magic != HEADER) {
+        if (magic != HEADER)
             throw new StreamCorruptedException(String.format("Invalid header got 0x%08X (expected 0xFF804269)", magic));
-        }
 
         short readVersion = input.readShort();
-        if (readVersion > VERSION) {
+        if (readVersion > VERSION)
             throw new FutureVersionException(readVersion, VERSION);
-        }
 
-        Class<T> componentType = (Class<T>) type.getClass().getComponentType();
-        int componentId = DataTypeRegistry.getId(componentType);
         int id = input.readUnsignedByte();
+        Class<T> componentType = (Class<T>) type.getClass().getComponentType();
+        if (componentType == DataType.class)
+            return (T) DataTypeRegistry.read(id, input);
 
-        if (componentId != id) {
+        int componentId = DataTypeRegistry.getId(componentType);
+
+        if (componentId != id)
             throw new DataTypeException("The read data id " + id + " is different from the expected id: " + componentId);
-        }
 
         return (T) DataTypeRegistry.read(id, input);
     }
@@ -171,24 +173,25 @@ public class DataIo {
      * @throws IOException when an I/O error occurs.
      * @throws DataTypeException when the read data type is invalid.
      */
+    @SuppressWarnings("unchecked")
     public static <T extends DataType<?>> T read(DataInput input, Class<T> type) throws IOException {
         int magic = input.readInt();
-        if (magic != HEADER) {
+        if (magic != HEADER)
             throw new StreamCorruptedException(String.format("Invalid header got 0x%08X (expected 0xFF804269)", magic));
-        }
 
         short readVersion = input.readShort();
         if (readVersion > VERSION) {
             throw new FutureVersionException(readVersion, VERSION);
         }
 
-        Class<T> componentType = (Class<T>) type.getClass().getComponentType();
-        int componentId = DataTypeRegistry.getId(componentType);
         int id = input.readUnsignedByte();
+        if (type == DataType.class)
+            return (T) DataTypeRegistry.read(id, input);
 
-        if (componentId != id) {
+        int componentId = DataTypeRegistry.getId(type);
+
+        if (componentId != id)
             throw new DataTypeException("The read data id " + id + " is different from the expected id: " + componentId);
-        }
 
         return (T) DataTypeRegistry.read(id, input);
     }
